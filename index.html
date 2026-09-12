@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>身份码 · 一键直达</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="description" content="点一下，直接打开拼多多取件身份码，不用再扫码。">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="身份码">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0f1115; --card:#191c22; --card2:#21252d; --txt:#f2f3f5;
+    --dim:#9aa0aa; --red:#e02e24; --red2:#ff5a4e; --ok:#2ecc71; --line:#2c313a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+  body{
+    background:radial-gradient(120% 80% at 50% 0%,#2a1414 0%,var(--bg) 55%);
+    color:var(--txt);font:16px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh;padding:18px 16px calc(28px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;gap:14px;align-items:center;
+  }
+  .wrap{width:100%;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:14px}
+  h1{font-size:20px;margin:4px 0 0;letter-spacing:.5px;text-align:center}
+  .sub{color:var(--dim);font-size:13px;text-align:center;margin:0 0 4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--dim);font-weight:600;letter-spacing:.3px}
+  #go{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    width:100%;min-height:180px;border:0;border-radius:20px;cursor:pointer;
+    background:linear-gradient(160deg,var(--red2),var(--red));
+    color:#fff;font-size:26px;font-weight:800;letter-spacing:2px;
+    box-shadow:0 14px 34px -12px rgba(224,46,36,.85);
+    transition:transform .08s ease,filter .15s ease;
+  }
+  #go:active{transform:scale(.97);filter:brightness(1.08)}
+  #go small{font-size:13px;font-weight:500;opacity:.9;letter-spacing:.5px}
+  #go.off{background:#2a2f38;color:#7d838d;box-shadow:none}
+  .row{display:flex;gap:10px;flex-wrap:wrap;min-width:0}
+  .row > *{min-width:0}
+  button.btn{
+    box-sizing:border-box;flex:1 1 96px;max-width:100%;padding:12px 10px;border-radius:12px;
+    border:1px solid var(--line);background:var(--card2);color:var(--txt);
+    font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap;
+  }
+  button.btn:active{filter:brightness(1.25)}
+  button.btn.primary{background:var(--red);border-color:var(--red)}
+  textarea,input{
+    width:100%;background:#0c0e12;color:var(--txt);border:1px solid var(--line);
+    border-radius:12px;padding:12px;font-size:15px;font-family:ui-monospace,Consolas,monospace;
+    resize:vertical;word-break:break-all;
+  }
+  textarea{min-height:84px}
+  .hint{color:var(--dim);font-size:12.5px;margin:8px 0 0;line-height:1.7}
+  .status{font-size:13.5px;margin-top:10px;min-height:20px;line-height:1.6}
+  .status.ok{color:var(--ok)}
+  .status.err{color:var(--red2)}
+  #cur{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#c9ced6;word-break:break-all;background:#0c0e12;border:1px dashed var(--line);border-radius:10px;padding:9px;margin-top:8px;display:none}
+  details{width:100%}
+  summary{cursor:pointer;color:var(--dim);font-size:13.5px;padding:6px 0;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";color:var(--red2)}
+  details[open] summary::before{content:"▾ "}
+  ol,ul{padding-left:20px;color:#cfd4db;font-size:13.5px;line-height:1.9;margin:6px 0}
+  ol b,ul b{color:#fff}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:#0c0e12;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:#ffd9d6;word-break:break-all}
+  .tag{display:inline-block;font-size:11.5px;color:#ffd9d6;background:rgba(224,46,36,.22);border:1px solid rgba(224,46,36,.45);border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:1px}
+  #preview{max-width:100%;border-radius:12px;margin-top:10px;display:none;border:1px solid var(--line)}
+  .foot{color:#5f656e;font-size:11.5px;text-align:center;margin-top:6px;line-height:1.8}
+  .foot a{color:#7d838d}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>身份码 · 一键直达</h1>
+  <p class="sub">点一下，直接打开你的拼多多取件身份码</p>
+
+  <button id="go" class="off">一键打开身份码<small id="goSub">还没有设置链接</small></button>
+  <div id="cur"></div>
+
+  <div class="row">
+    <button class="btn primary" id="pickBtn">扫二维码截图</button>
+    <button class="btn" id="copyBtn">复制链接</button>
+  </div>
+  <input type="file" id="file" accept="image/*" style="display:none">
+
+  <div class="card">
+    <h2>① 设置身份码链接<span class="tag">只需设置一次</span></h2>
+    <textarea id="link" placeholder="把驿站二维码里的内容 / 拼多多里复制的链接粘贴到这里&#10;例如：https://mobile.yangkeduo.com/... 或 pinduoduo://com.xunmeng.pinduoduo/..."></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="saveBtn">保存</button>
+      <button class="btn" id="testBtn">试一下</button>
+      <button class="btn" id="clearBtn">清空</button>
+    </div>
+    <div id="status" class="status"></div>
+    <p class="hint">也可以直接扫二维码截图：手机截图后点上面的「扫二维码截图」，或在电脑上把二维码图片拖进来。</p>
+    <img id="preview" alt="二维码预览">
+  </div>
+
+  <details class="card">
+    <summary>② 怎么拿到这个链接？（1 分钟）</summary>
+    <ol>
+      <li>下次取件时，用<b>手机相机</b>或<b>微信扫一扫</b>对着驿站那个二维码扫一下。</li>
+      <li><b>先别点确认进入</b>，看屏幕上显示的链接内容。</li>
+      <li>把它复制下来，粘贴到上面的框里 → 保存。搞定。</li>
+      <li>懒得复制？直接<b>截图</b>那个二维码，然后用上面的「扫二维码截图」，我帮你认。</li>
+    </ol>
+  </details>
+
+  <details class="card">
+    <summary>③ 怎么放到手机桌面（点一次，以后都在桌面）</summary>
+    <ol>
+      <li>用<b>手机 Chrome / Edge / 夸克</b>等浏览器打开本页。</li>
+      <li>先把链接<b>保存</b>好（这一步只做一次）。</li>
+      <li>浏览器菜单 → <b>「添加到主屏幕 / 添加到桌面」</b>，名字填「身份码」。</li>
+      <li>以后取快递：桌面点「身份码」→ 点大红按钮 → 出码。</li>
+    </ol>
+    <p class="hint">想再省一步（连这一屏都不要）：装 <b>HTTP Shortcuts</b>（安卓免费、开源），新建一个「打开网址」的快捷方式，把链接填进去 → 桌面图标点一下就是终点。这是安卓上最干脆的做法。</p>
+  </details>
+
+  <details class="card">
+    <summary>④ 点了没反应 / 打不开怎么办</summary>
+    <ol>
+      <li><b>链接是 https://…</b>：正常会在浏览器里打开；如果页面提示「打开拼多多」，选<b>允许</b>。</li>
+      <li><b>链接是 pinduoduo://…</b>：安卓 Chrome 有时会拦这种跳转。本页会自动尝试 <code>intent://</code> 方式唤起（安卓成功率最高）；还不行就用 <b>HTTP Shortcuts</b> / <b>Tasker</b>，或者点「复制链接」粘到拼多多里打开。</li>
+      <li>如果驿站二维码里的链接<b>每次都变</b>（带一次性参数），说明它是动态码，绕不过去。那就把桌面图标当成「直接进拼多多身份码」的入口用，一样能省掉大半步骤。</li>
+      <li>拼多多升级后入口若变化，链接失效的话，回来重新抓一次二维码填进去即可。</li>
+    </ol>
+  </details>
+
+  <p class="foot">
+    纯静态页面 · 你的链接只保存在本机浏览器里，不会上传到服务器<br>
+    <span id="host"></span>
+  </p>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var KEY = 'pdd_id_link_v1';
+  var go=$('go'), goSub=$('goSub'), link=$('link'), status=$('status'), cur=$('cur'), file=$('file'), preview=$('preview');
+
+  function kindOf(u){
+    if(/^https?:\/\//i.test(u)) return 'web';
+    if(/^pinduoduo:\/\//i.test(u) || /^intent:\/\//i.test(u) || /^pdd:\/\//i.test(u)) return 'app';
+    return /^[a-z0-9+.-]+:/i.test(u) ? 'app' : 'none';
+  }
+  function label(u){
+    var k = kindOf(u);
+    if(k === 'web') return '打开身份码页面';
+    if(k === 'app') return '打开拼多多 · 身份码';
+    return '打开链接';
+  }
+  function say(msg, cls){ status.textContent = msg || ''; status.className = 'status' + (cls ? ' ' + cls : ''); }
+
+  function render(){
+    var u = (localStorage.getItem(KEY) || '').trim();
+    link.value = u;
+    if(u){
+      go.className = '';
+      go.firstChild.nodeValue = '一键' + label(u);
+      goSub.textContent = kindOf(u) === 'web' ? '在浏览器里打开' : '直接唤起拼多多';
+      cur.style.display = 'block';
+      cur.textContent = u;
+    }else{
+      go.className = 'off';
+      go.firstChild.nodeValue = '一键打开身份码';
+      goSub.textContent = '还没有设置链接';
+      cur.style.display = 'none';
+    }
+  }
+
+  // 把 http(s) 链接包成拼多多 scheme（官方推荐做法），用于浏览器里拉起 App
+  function toScheme(u){
+    var m = /^https?:\/\/mobile\.yangkeduo\.com\/(.+)$/i.exec(u);
+    if(m) return 'pinduoduo://com.xunmeng.pinduoduo/' + m[1];
+    return null;
+  }
+  function toIntent(u){
+    var m = /^pinduoduo:\/\/com\.xunmeng\.pinduoduo\/(.+)$/i.exec(u);
+    if(!m) return null;
+    return 'intent://' + m[1] + '#Intent;scheme=pinduoduo;package=com.xunmeng.pinduoduo;end';
+  }
+
+  function openLink(u, forceWeb){
+    if(!u){ say('请先设置并保存链接', 'err'); return; }
+    var k = kindOf(u);
+    try{
+      if(k === 'web'){
+        if(!forceWeb){
+          var sc = toScheme(u);
+          if(sc && !/MicroMessenger/i.test(navigator.userAgent)){
+            // 先试着唤起 App；没装/被拦的话 1.2 秒后回落到网页
+            var t = setTimeout(function(){ window.location.href = u; }, 1200);
+            window.addEventListener('pagehide', function(){ clearTimeout(t); }, { once:true });
+            window.location.href = sc;
+            return;
+          }
+        }
+        window.location.href = u;
+        return;
+      }
+      // app scheme：安卓优先用 intent://（Chrome 兼容性最好），其它情况直接跳
+      var target = u;
+      if(/^pinduoduo:\/\//i.test(u) && /Android/i.test(navigator.userAgent)){
+        var it = toIntent(u);
+        if(it) target = it;
+      }
+      window.location.href = target;
+      setTimeout(function(){
+        say('如果没反应：点「复制链接」，粘到拼多多 App 的搜索框里打开；或装 HTTP Shortcuts 用它来唤起。', 'err');
+      }, 1500);
+    }catch(e){ say('打开失败：' + e.message, 'err'); }
+  }
+
+  go.addEventListener('click', function(){ openLink((localStorage.getItem(KEY)||'').trim()); });
+
+  $('saveBtn').addEventListener('click', function(){
+    var u = link.value.trim().replace(/^["'<\s]+|["'>\s]+$/g,'');
+    if(!u){ say('内容为空', 'err'); return; }
+    localStorage.setItem(KEY, u); render();
+    say('已保存 ✓ 类型：' + (kindOf(u)==='web' ? '网页链接' : kindOf(u)==='app' ? 'App 直达' : '未知') + '（只存在这台手机上）', 'ok');
+  });
+  $('testBtn').addEventListener('click', function(){ openLink(link.value.trim()); });
+  $('clearBtn').addEventListener('click', function(){
+    localStorage.removeItem(KEY); link.value=''; render(); say('已清空');
+  });
+  $('copyBtn').addEventListener('click', function(){
+    var u = (localStorage.getItem(KEY)||'').trim() || link.value.trim();
+    if(!u){ say('还没有链接', 'err'); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(u).then(function(){ say('已复制 ✓','ok'); }, function(){ say('复制失败，请长按下面的链接手动复制','err'); });
+    }else{
+      say('请长按下面的链接手动复制');
+      if(cur.style.display === 'none'){ cur.style.display='block'; cur.textContent=u; }
+    }
+  });
+
+  /* ---------- 二维码解码（本地识别，图片不上传） ---------- */
+  var libPromise = null;
+  function loadLib(){
+    if(libPromise) return libPromise;
+    libPromise = new Promise(function(res, rej){
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+      s.onload = function(){ window.jsQR ? res() : rej(new Error('解码库加载异常')); };
+      s.onerror = function(){ rej(new Error('解码库加载失败，请检查网络')); };
+      document.head.appendChild(s);
+    });
+    return libPromise;
+  }
+  $('pickBtn').addEventListener('click', function(){ file.click(); });
+
+  function handleFile(f){
+    if(!f) return;
+    say('正在识别…');
+    var img = new Image();
+    img.onload = function(){
+      preview.src = img.src; preview.style.display = 'block';
+      var canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      function done(text){
+        link.value = text; localStorage.setItem(KEY, text); render();
+        say('识别成功，已自动保存 ✓', 'ok');
+        try{ URL.revokeObjectURL(img.src); }catch(e){}
+      }
+      function viaDetector(){
+        if(!('BarcodeDetector' in window)) return Promise.reject(new Error('no detector'));
+        return new window.BarcodeDetector({ formats:['qr_code'] }).detect(canvas).then(function(c){
+          if(c && c.length) return c[0].rawValue;
+          throw new Error('没找到二维码');
+        });
+      }
+      function viaJsQR(){
+        return loadLib().then(function(){
+          var d = ctx.getImageData(0,0,canvas.width,canvas.height);
+          var r = window.jsQR(d.data, d.width, d.height, { inversionAttempts:'attemptBoth' });
+          if(r && r.data) return r.data;
+          throw new Error('没找到二维码');
+        });
+      }
+      viaDetector().catch(viaJsQR).then(done).catch(function(e){
+        say('识别失败：' + e.message + '。可以手动把二维码内容粘贴到上面。', 'err');
+      });
+    };
+    img.onerror = function(){ say('图片读取失败', 'err'); };
+    img.src = URL.createObjectURL(f);
+  }
+  file.addEventListener('change', function(){ handleFile(file.files && file.files[0]); });
+
+  // 电脑上直接拖拽二维码图片也能识别
+  ['dragover','drop'].forEach(function(ev){
+    document.addEventListener(ev, function(e){
+      e.preventDefault();
+      if(ev === 'drop' && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  });
+
+  var h = $('host');
+  if(h) h.textContent = location.host ? ('本页地址：' + location.origin + location.pathname) : '';
+  render();
+
+  // 离线缓存（首次访问后，取件时没网也能打开）
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
