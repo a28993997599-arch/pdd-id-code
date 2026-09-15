@@ -121,6 +121,22 @@
     <img id="preview" alt="二维码预览">
   </div>
 
+  <div class="card">
+    <h2>② 让微信能扫到它<span class="tag">推荐做法</span></h2>
+    <p class="hint" style="margin-top:0">
+      你驿站那个二维码里装的就是这条链接。所以最省事的做法是：
+      <b>用微信扫一扫扫下面的二维码</b>，出码页面会直接在微信里打开 —— 那是最稳的方式。
+    </p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="qrBtn">生成二维码</button>
+      <button class="btn" id="qrSave">保存这张图</button>
+    </div>
+    <div id="qrBox" style="display:none;text-align:center;margin-top:12px">
+      <img id="qrImg" alt="身份码二维码" style="max-width:100%;border-radius:12px;background:#fff;padding:10px">
+      <p class="hint">截屏保存这张图也行。用微信「扫一扫」→ 相册 → 选这张图即可（微信支持从相册识别二维码）。</p>
+    </div>
+  </div>
+
   <details class="card">
     <summary>② 怎么拿到这个链接？（1 分钟）</summary>
     <ol>
@@ -207,18 +223,59 @@
     return 'intent://' + m[1] + '#Intent;scheme=pinduoduo;package=com.xunmeng.pinduoduo;end';
   }
 
+  // 独立应用模式（从桌面图标打开）里的 WebView 不会把 https 链接交给微信，
+  // 必须用安卓的 intent:// 显式声明"交给微信打开"。这是修好桌面图标的关键。
+  // 判断方式取多重兜底：display-mode 在部分机型/内核上不可靠，再用视口高度≈屏幕高度兜底。
+  function isStandalone(){
+    if(/[?&]app=1/.test(location.search)) return true;   // 强制开关（调试用）
+    try{
+      if(window.matchMedia && (window.matchMedia('(display-mode: standalone)').matches ||
+                               window.matchMedia('(display-mode: minimal-ui)').matches)) return true;
+    }catch(e){}
+    if(navigator.standalone === true) return true;
+    try{
+      var sh = window.screen && window.screen.height ? window.screen.height : 0;
+      var ih = window.innerHeight || 0;
+      // 独立窗口没有浏览器地址栏，视口几乎等于整屏高度
+      if(sh > 0 && ih > 0 && (sh - ih) <= 120) return true;
+    }catch(e){}
+    return false;
+  }
+  function wechatIntent(u){
+    var m = /^https?:\/\/([^\/]+)(\/[^\s]*)?$/i.exec(u);
+    if(!m) return null;
+    var host = m[1], pathq = (m[2] || '/');
+    var qi = pathq.indexOf('?');
+    var p = qi >= 0 ? pathq.slice(0, qi) : pathq;
+    var q = qi >= 0 ? pathq.slice(qi + 1) : '';
+    // intent:// 里 & 必须转成 %26，否则会被解析成 Intent 参数分隔符
+    return 'intent://' + host + p + (q ? '?' + q.replace(/&/g, '%26') : '') +
+           '#Intent;scheme=https;package=com.tencent.mm;end';
+  }
   function openLink(u, forceWeb){
     if(!u){ say('请先设置并保存链接', 'err'); return; }
     var k = kindOf(u);
-    // mdkd.pinduoduo.com 是驿站链接：
-    // 服务端只认微信 UA，放行到微信 OAuth；安卓上外部浏览器点它时，
-    // 系统会把 OAuth 请求交给微信客户端完成（微信里有登录态）→ 能正常出码。
-    // 所以这里**不要**拦截，让它照常跳转即可。
+    var inWeChat = /MicroMessenger/i.test(navigator.userAgent);
+    var android = /Android/i.test(navigator.userAgent);
     try{
       if(k === 'web'){
+        // 1) 驿站类链接（微信 OAuth）：独立模式必须用 intent:// 交给微信，否则只会报"请在微信客户端打开链接"
+        if(android && !inWeChat && /mdkd\.pinduoduo\.com/i.test(u) && isStandalone()){
+          var it = wechatIntent(u);
+          if(it){
+            say('正在交给微信打开…');
+            var t2 = setTimeout(function(){ window.location.href = u; }, 1600);
+            window.addEventListener('pagehide', function(){ clearTimeout(t2); }, { once:true });
+            window.location.href = it;
+            setTimeout(function(){
+              say('如果没反应：点「复制链接」，粘到微信里发给自己，从微信点开。', 'err');
+            }, 3000);
+            return;
+          }
+        }
         if(!forceWeb){
           var sc = toScheme(u);
-          if(sc && !/MicroMessenger/i.test(navigator.userAgent)){
+          if(sc && !inWeChat){
             // 先试着唤起 App；没装/被拦的话 1.2 秒后回落到网页
             var t = setTimeout(function(){ window.location.href = u; }, 1200);
             window.addEventListener('pagehide', function(){ clearTimeout(t); }, { once:true });
@@ -231,9 +288,9 @@
       }
       // app scheme：安卓优先用 intent://（Chrome 兼容性最好），其它情况直接跳
       var target = u;
-      if(/^pinduoduo:\/\//i.test(u) && /Android/i.test(navigator.userAgent)){
-        var it = toIntent(u);
-        if(it) target = it;
+      if(/^pinduoduo:\/\//i.test(u) && android){
+        var it2 = toIntent(u);
+        if(it2) target = it2;
       }
       window.location.href = target;
       setTimeout(function(){
@@ -331,6 +388,50 @@
   var h = $('host');
   if(h) h.textContent = location.host ? ('本页地址：' + location.origin + location.pathname) : '';
 
+  /* ---------- 在页面里生成二维码（用微信扫它最稳） ---------- */
+  var qrLibPromise = null;
+  function loadQrLib(){
+    if(qrLibPromise) return qrLibPromise;
+    qrLibPromise = new Promise(function(res, rej){
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+      s.onload = function(){ window.QRCode ? res() : rej(new Error('二维码库加载异常')); };
+      s.onerror = function(){ rej(new Error('二维码库加载失败，请检查网络')); };
+      document.head.appendChild(s);
+    });
+    return qrLibPromise;
+  }
+  function currentLink(){
+    return (localStorage.getItem(KEY) || link.value || '').trim();
+  }
+  function makeQR(){
+    var u = currentLink();
+    if(!u){ say('请先在①里设置并保存链接', 'err'); return; }
+    if(!/^https?:\/\//i.test(u)){ say('这个链接不是网址（微信扫一扫只能识别 http/https 链接）', 'err'); return; }
+    say('正在生成二维码…');
+    loadQrLib().then(function(){
+      var canvas = document.createElement('canvas');
+      return window.QRCode.toCanvas(canvas, u, { width: 520, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
+        .then(function(){
+          $('qrImg').src = canvas.toDataURL('image/png');
+          $('qrBox').style.display = 'block';
+          say('二维码已生成 ✓ 用微信「扫一扫」扫它，出码页会直接在微信里打开', 'ok');
+          $('qrBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+    }).catch(function(e){
+      say('生成失败：' + e.message + '。也可以改用「扫描二维码截图」反向操作，或直接在微信里粘贴链接打开。', 'err');
+    });
+  }
+  $('qrBtn').addEventListener('click', makeQR);
+  $('qrSave').addEventListener('click', function(){
+    var src = $('qrImg').src;
+    if(!src){ say('先生成二维码', 'err'); return; }
+    var a = document.createElement('a');
+    a.href = src; a.download = '身份码二维码.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    say('已开始保存（若没反应，直接对屏幕截屏即可）', 'ok');
+  });
+
   // 用 ?link=<编码后的链接> 打开本页 → 自动填入并保存，同时把参数从地址栏抹掉。
   // 这样驿站编号只存在你手机浏览器里，不会被写进公开的页面代码。
   (function(){
@@ -343,7 +444,19 @@
         say('已从链接参数自动填入并保存 ✓', 'ok');
       }
     }catch(e){}
-    try{ history.replaceState(null, '', location.pathname); }catch(e){}
+    // 注意：必须延迟清理地址栏，否则会把同一串参数里的 &go=1 一起抹掉，
+    //       导致下面的"自动跳转"判断永远读不到（这个坑踩过一次）。
+    setTimeout(function(){
+      try{ history.replaceState(null, '', location.pathname); }catch(e){}
+    }, 50);
+  })();
+
+  // ?go=1 → 打开就自动跳转（桌面图标可以做成"点开即达"，连红按钮都不用点）
+  (function(){
+    if(!/[?&]go=1/.test(location.search)) return;
+    setTimeout(function(){
+      if((localStorage.getItem(KEY) || '').trim()) go.click();
+    }, 400);
   })();
 
   // 提示条
