@@ -132,7 +132,7 @@
       <button class="btn" id="qrSave">保存这张图</button>
     </div>
     <div id="qrBox" style="display:none;text-align:center;margin-top:12px">
-      <img id="qrImg" alt="身份码二维码" style="max-width:100%;border-radius:12px;background:#fff;padding:10px">
+      <div id="qrHolder" style="display:inline-block;background:#fff;padding:12px;border-radius:12px"></div>
       <p class="hint">截屏保存这张图也行。用微信「扫一扫」→ 相册 → 选这张图即可（微信支持从相册识别二维码）。</p>
     </div>
   </div>
@@ -389,12 +389,14 @@
   if(h) h.textContent = location.host ? ('本页地址：' + location.origin + location.pathname) : '';
 
   /* ---------- 在页面里生成二维码（用微信扫它最稳） ---------- */
+  // 用 qrcodejs（19KB，API 是 new QRCode(el, opts)）。
+  // 注意：npm 的 qrcode 包没有浏览器版（build/qrcode.min.js 是 404），别再用它。
   var qrLibPromise = null;
   function loadQrLib(){
     if(qrLibPromise) return qrLibPromise;
     qrLibPromise = new Promise(function(res, rej){
       var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+      s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
       s.onload = function(){ window.QRCode ? res() : rej(new Error('二维码库加载异常')); };
       s.onerror = function(){ rej(new Error('二维码库加载失败，请检查网络')); };
       document.head.appendChild(s);
@@ -410,21 +412,28 @@
     if(!/^https?:\/\//i.test(u)){ say('这个链接不是网址（微信扫一扫只能识别 http/https 链接）', 'err'); return; }
     say('正在生成二维码…');
     loadQrLib().then(function(){
-      var canvas = document.createElement('canvas');
-      return window.QRCode.toCanvas(canvas, u, { width: 520, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } })
-        .then(function(){
-          $('qrImg').src = canvas.toDataURL('image/png');
-          $('qrBox').style.display = 'block';
-          say('二维码已生成 ✓ 用微信「扫一扫」扫它，出码页会直接在微信里打开', 'ok');
-          $('qrBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
+      var holder = $('qrHolder');
+      holder.innerHTML = '';
+      new window.QRCode(holder, {
+        text: u,
+        width: 260,
+        height: 260,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: window.QRCode.CorrectLevel.M,
+      });
+      $('qrBox').style.display = 'block';
+      say('二维码已生成 ✓ 用微信「扫一扫」扫它，出码页会直接在微信里打开', 'ok');
+      setTimeout(function(){ try{ $('qrBox').scrollIntoView({ behavior:'smooth', block:'center' }); }catch(e){} }, 60);
     }).catch(function(e){
       say('生成失败：' + e.message + '。也可以改用「扫描二维码截图」反向操作，或直接在微信里粘贴链接打开。', 'err');
     });
   }
   $('qrBtn').addEventListener('click', makeQR);
   $('qrSave').addEventListener('click', function(){
-    var src = $('qrImg').src;
+    var cv = $('qrHolder') && $('qrHolder').querySelector('canvas');
+    var img = $('qrHolder') && $('qrHolder').querySelector('img');
+    var src = cv ? cv.toDataURL('image/png') : (img ? img.src : '');
     if(!src){ say('先生成二维码', 'err'); return; }
     var a = document.createElement('a');
     a.href = src; a.download = '身份码二维码.png';
