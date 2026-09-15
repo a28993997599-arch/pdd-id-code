@@ -1,5 +1,5 @@
 // 离线缓存：第一次打开后，取件时即使没网也能用
-const CACHE = 'idcode-v1';
+const CACHE = 'idcode-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {

@@ -29,6 +29,15 @@
   .wrap{width:100%;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:14px}
   h1{font-size:20px;margin:4px 0 0;letter-spacing:.5px;text-align:center}
   .sub{color:var(--dim);font-size:13px;text-align:center;margin:0 0 4px}
+  #banner{background:rgba(224,46,36,.12);border:1px solid rgba(224,46,36,.45);border-radius:14px;padding:12px 13px}
+  #banner b{color:#fff}
+  #banner p{margin:0;font-size:13px;line-height:1.7;color:#f0d6d4}
+  #banner .acts{display:flex;gap:9px;margin-top:10px;flex-wrap:wrap}
+  #banner a,#banner button{box-sizing:border-box;flex:1 1 100px;min-width:0;text-align:center;text-decoration:none;
+    padding:9px 10px;border-radius:10px;font-size:13.5px;font-weight:600;border:1px solid var(--line);
+    background:var(--card2);color:var(--txt);cursor:pointer}
+  #banner a{background:var(--red);border-color:var(--red)}
+  #banner.off{display:none}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
   .card h2{font-size:14px;margin:0 0 10px;color:var(--dim);font-weight:600;letter-spacing:.3px}
   #go{
@@ -80,6 +89,15 @@
 <div class="wrap">
   <h1>身份码 · 一键直达</h1>
   <p class="sub">点一下，直接打开你的拼多多取件身份码</p>
+
+  <div id="banner" class="off">
+    <p><b>你那个码是"微信专用"的。</b>实测解出来是 <code>mdkd.pinduoduo.com</code>，
+       它只认微信内置浏览器（要微信登录），普通浏览器打开会提示"请在微信客户端打开链接"。</p>
+    <div class="acts">
+      <a href="./test.html">去看实测方案 →</a>
+      <button id="bannerOff">知道了</button>
+    </div>
+  </div>
 
   <button id="go" class="off">一键打开身份码<small id="goSub">还没有设置链接</small></button>
   <div id="cur"></div>
@@ -158,6 +176,7 @@
     return '打开链接';
   }
   function say(msg, cls){ status.textContent = msg || ''; status.className = 'status' + (cls ? ' ' + cls : ''); }
+  function reveal(u){ cur.style.display = 'block'; cur.textContent = u; }
 
   function render(){
     var u = (localStorage.getItem(KEY) || '').trim();
@@ -191,6 +210,12 @@
   function openLink(u, forceWeb){
     if(!u){ say('请先设置并保存链接', 'err'); return; }
     var k = kindOf(u);
+    // 驿站那种 mdkd.pinduoduo.com 链接只认微信内置浏览器，浏览器打开必然报错 → 提前告知
+    if(/mdkd\.pinduoduo\.com/i.test(u) && !/MicroMessenger/i.test(navigator.userAgent)){
+      say('这条链接只能在微信里打开（普通浏览器会提示"请在微信客户端打开链接"）。请点「复制链接」，粘到微信里发给自己，从微信点开；或看「实测方案」页。', 'err');
+      reveal(u);
+      return;
+    }
     try{
       if(k === 'web'){
         if(!forceWeb){
@@ -307,6 +332,22 @@
 
   var h = $('host');
   if(h) h.textContent = location.host ? ('本页地址：' + location.origin + location.pathname) : '';
+
+  // 「微信专用」提示条：解出来的驿站链接只认微信内置浏览器
+  (function(){
+    var banner = $('banner');
+    if(!banner) return;
+    var dismissed = localStorage.getItem('pdd_banner_v1') === '1';
+    var u = (localStorage.getItem(KEY) || '');
+    var wechatOnly = /mdkd\.pinduoduo\.com/i.test(u);
+    if(!dismissed && (wechatOnly || !u)) banner.className = '';
+    var off = $('bannerOff');
+    if(off) off.addEventListener('click', function(){
+      localStorage.setItem('pdd_banner_v1', '1');
+      banner.className = 'off';
+    });
+  })();
+
   render();
 
   // 离线缓存（首次访问后，取件时没网也能打开）
