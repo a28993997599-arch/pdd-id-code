@@ -50,7 +50,7 @@
 
   <div class="card">
     <h2>你的身份码链接（已内置）</h2>
-    <div class="link" id="lk">https://mdkd.pinduoduo.com/weixin/package?station_code=A074037804</div>
+    <div class="link" id="lk">https://mdkd.pinduoduo.com/weixin/package?station_code=<你的驿站编号></div>
     <div class="row" style="margin-top:10px">
       <button class="btn p" id="copy">复制链接</button>
       <button class="btn" id="t1">测 ① 直接打开</button>
@@ -110,7 +110,14 @@
 
 <script>
 (function(){
-  var LINK = 'https://mdkd.pinduoduo.com/weixin/package?station_code=A074037804';
+  // 默认留空占位：真实链接由用户在页面上填入 / 用 ?link= 参数带入，
+  // 不把任何人的驿站编号写进公开代码里。
+  var LINK = (function(){
+    var m = /[?&]link=([^&#]+)/.exec(location.search);
+    if(m){ try{ return decodeURIComponent(m[1]); }catch(e){} }
+    try{ return localStorage.getItem('pdd_id_link_v1') || ''; }catch(e){ return ''; }
+  })();
+  var PLACEHOLDER = 'https://mdkd.pinduoduo.com/weixin/package?station_code=此处填你的驿站编号';
   var $ = function(id){ return document.getElementById(id); };
   var v = $('v');
   function say(msg, cls){ v.textContent = msg || ''; v.className = 'verdict' + (cls ? ' ' + cls : ''); }
