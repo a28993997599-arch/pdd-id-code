@@ -91,10 +91,10 @@
   <p class="sub">点一下，直接打开你的拼多多取件身份码</p>
 
   <div id="banner" class="off">
-    <p><b>你那个码是"微信专用"的。</b>实测解出来是 <code>mdkd.pinduoduo.com</code>，
-       它只认微信内置浏览器（要微信登录），普通浏览器打开会提示"请在微信客户端打开链接"。</p>
+    <p><b>你的驿站是 <code>mdkd.pinduoduo.com</code> 类型的链接。</b>
+       实测：在手机上点它会短暂跳到微信（完成登录），然后返回浏览器显示身份码 —— 可以直接用。</p>
     <div class="acts">
-      <a href="./test.html">去看实测方案 →</a>
+      <a href="./test.html">看实测记录 →</a>
       <button id="bannerOff">知道了</button>
     </div>
   </div>
@@ -210,12 +210,10 @@
   function openLink(u, forceWeb){
     if(!u){ say('请先设置并保存链接', 'err'); return; }
     var k = kindOf(u);
-    // 驿站那种 mdkd.pinduoduo.com 链接只认微信内置浏览器，浏览器打开必然报错 → 提前告知
-    if(/mdkd\.pinduoduo\.com/i.test(u) && !/MicroMessenger/i.test(navigator.userAgent)){
-      say('这条链接只能在微信里打开（普通浏览器会提示"请在微信客户端打开链接"）。请点「复制链接」，粘到微信里发给自己，从微信点开；或看「实测方案」页。', 'err');
-      reveal(u);
-      return;
-    }
+    // mdkd.pinduoduo.com 是驿站链接：
+    // 服务端只认微信 UA，放行到微信 OAuth；安卓上外部浏览器点它时，
+    // 系统会把 OAuth 请求交给微信客户端完成（微信里有登录态）→ 能正常出码。
+    // 所以这里**不要**拦截，让它照常跳转即可。
     try{
       if(k === 'web'){
         if(!forceWeb){
@@ -333,14 +331,29 @@
   var h = $('host');
   if(h) h.textContent = location.host ? ('本页地址：' + location.origin + location.pathname) : '';
 
-  // 「微信专用」提示条：解出来的驿站链接只认微信内置浏览器
+  // 用 ?link=<编码后的链接> 打开本页 → 自动填入并保存，同时把参数从地址栏抹掉。
+  // 这样驿站编号只存在你手机浏览器里，不会被写进公开的页面代码。
+  (function(){
+    var m = /[?&]link=([^&#]+)/.exec(location.search);
+    if(!m) return;
+    try{
+      var v = decodeURIComponent(m[1]).trim();
+      if(/^(https?|[a-z0-9+.-]+):\/\//i.test(v)){
+        localStorage.setItem(KEY, v);
+        say('已从链接参数自动填入并保存 ✓', 'ok');
+      }
+    }catch(e){}
+    try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  })();
+
+  // 提示条
   (function(){
     var banner = $('banner');
     if(!banner) return;
     var dismissed = localStorage.getItem('pdd_banner_v1') === '1';
     var u = (localStorage.getItem(KEY) || '');
-    var wechatOnly = /mdkd\.pinduoduo\.com/i.test(u);
-    if(!dismissed && (wechatOnly || !u)) banner.className = '';
+    var wechatType = /mdkd\.pinduoduo\.com/i.test(u);
+    if(!dismissed && (wechatType || !u)) banner.className = '';
     var off = $('bannerOff');
     if(off) off.addEventListener('click', function(){
       localStorage.setItem('pdd_banner_v1', '1');

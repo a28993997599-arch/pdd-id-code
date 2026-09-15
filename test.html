@@ -68,33 +68,27 @@
   <div class="card">
     <h2>根据实测结果，选一条</h2>
     <div class="pick">
-      <div class="n">A</div>
+      <div class="n" style="background:#2ecc71">✓</div>
       <div class="t">
-        <b>如果 ① 能直接出码</b><span class="tag g">最理想</span><br>
-        那太好了 —— 直接把 <code>mdkd.pinduoduo.com</code> 这个链接填进主页面，桌面点一下就出码，全流程结束。
+        <b>① 直接打开 —— 已实测出码成功</b><span class="tag g">结论</span><br>
+        手机上点这个链接，会短暂跳到微信完成一次登录，然后回到浏览器显示身份码。
+        <br>也就是说 <b>不用再扫码了</b>：主页面填好链接，桌面点一下就到身份码。
       </div>
     </div>
     <div class="pick">
       <div class="n">B</div>
       <div class="t">
-        <b>如果只有微信里能打开</b><span class="tag g">大概率是这个</span><br>
-        用 ③ 把链接发给自己（发给<b>文件传输助手</b>最干净）→ 微信里点一下就能出码。<br>
+        <b>备用：从微信里打开</b><span class="tag y">① 万一失效时用</span><br>
+        用 ③ 或「复制链接」把链接发给<b>文件传输助手</b> → 微信里点一下就能出码。<br>
         然后<b>长按那条消息 → 置顶</b>，以后：微信 → 文件传输助手 → 点置顶那条 → 出码。
       </div>
     </div>
     <div class="pick">
       <div class="n">C</div>
       <div class="t">
-        <b>想更少步骤</b><span class="tag y">推荐配合 B</span><br>
+        <b>备用加强：收藏</b><span class="tag y">可选</span><br>
         在微信里打开出码页面后 → 右上角 <b>…</b> → <b>收藏</b>。<br>
         以后：微信 → 我 → 收藏 → 点那条 → 出码。
-      </div>
-    </div>
-    <div class="pick">
-      <div class="n">D</div>
-      <div class="t">
-        <b>如果 ② 真能唤起微信并打开网页</b><span class="tag y">需要实测</span><br>
-        我把主页面改成"桌面点一下 → 直接跳微信 → 出码"。但据我查到的资料，这条路多半被封了，所以先测。
       </div>
     </div>
   </div>
@@ -131,7 +125,7 @@
 
   // ① 直接打开
   $('t1').addEventListener('click', function(){
-    say('正在用浏览器打开…如果出现"请在微信客户端打开链接"，说明这条路不通，看方案 B。');
+    say('正在用浏览器打开…会短暂跳到微信完成登录，然后回到这里显示身份码。', 'ok');
     setTimeout(function(){ location.href = LINK; }, 200);
   });
 
